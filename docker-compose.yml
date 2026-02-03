@@ -1,0 +1,62 @@
+services:
+  database:
+    image: mysql:8.0
+    container_name: sigpesq_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: sigpesq
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./database/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Ferramenta para gerenciar o banco via browser (Opcional, mas útil)
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - database
+
+  backend:
+    build: ./backend
+    container_name: sigpesq_backend
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=database
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - DB_NAME=sigpesq
+      - ALLOWED_ORIGINS=http://localhost:5173
+    depends_on:
+      database:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    container_name: sigpesq_frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
