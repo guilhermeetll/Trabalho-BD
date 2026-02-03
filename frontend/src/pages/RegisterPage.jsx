@@ -20,25 +20,33 @@ export default function RegisterPage({ onSwitchToLogin }) {
         e.preventDefault()
         setError('')
         try {
-            // O backend espera { nome, email, cpf, tipo, senha }
-            console.log("Enviando:", formData)
-            // Usamos o endpoint de participantes que agora faz hash da senha
-            await api.post('/participantes/', formData)
+            // Ensure CPF has only numbers
+            const payload = { ...formData, cpf: formData.cpf.replace(/\D/g, '') }
+            console.log("Enviando:", payload)
+
+            await api.post('/participantes/', payload)
             setSuccess(true)
         } catch (err) {
             console.error(err)
-            // Tenta pegar a mensagem de erro da API ou usa uma genérica
-            const msg = err.response?.data?.detail || 'Erro ao realizar cadastro. Verifique os dados.'
+            let msg = 'Erro ao realizar cadastro.'
+            if (err.response?.data?.detail) {
+                // Se for array (erro de validação do Pydantic), formata
+                if (Array.isArray(err.response.data.detail)) {
+                    msg = err.response.data.detail.map(e => `${e.loc.join('.')}: ${e.msg}`).join('\n')
+                } else {
+                    msg = err.response.data.detail
+                }
+            }
             setError(msg)
+            alert("Erro no cadastro:\n" + msg)
         }
     }
 
     if (success) {
         return (
-            <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-app)' }}>
-                <div className="card" style={{ width: '100%', maxWidth: '400px', padding: '2.5rem', textAlign: 'center' }}>
-                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎉</div>
-                    <h1 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: 'var(--secondary)' }}>Cadastro realizado!</h1>
+            <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC' }}>
+                <div className="card" style={{ width: '100%', maxWidth: '400px', padding: '2.5rem', textAlign: 'center', backgroundColor: '#fff' }}>
+                    <h1 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: '#0F172A' }}>Cadastro realizado!</h1>
                     <p className="text-muted" style={{ marginBottom: '2rem' }}>Sua conta foi criada com sucesso.</p>
                     <button
                         onClick={onSwitchToLogin}
@@ -89,7 +97,16 @@ export default function RegisterPage({ onSwitchToLogin }) {
 
                     <div>
                         <label>Senha</label>
-                        <input type="password" name="senha" className="input" value={formData.senha} onChange={handleChange} required />
+                        <input
+                            type="password"
+                            name="senha"
+                            className="input"
+                            value={formData.senha}
+                            onChange={handleChange}
+                            required
+                            minLength={6}
+                        />
+                        <span className="text-muted text-xs">Mínimo de 6 caracteres</span>
                     </div>
 
                     {error && <div style={{ color: '#ef4444', fontSize: '0.9rem', background: '#fee2e2', padding: '0.5rem', borderRadius: '4px' }}>{error}</div>}

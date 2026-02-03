@@ -22,7 +22,7 @@ class ParticipanteBase(BaseModel):
     tipo: TipoParticipante
 
 class ParticipanteCreate(ParticipanteBase):
-    senha: str
+    senha: str = Field(..., min_length=6, max_length=50)
 
 class ParticipanteResponse(ParticipanteBase):
     criado_em: Optional[date] = None
