@@ -12,12 +12,14 @@ export default function Modal({ isOpen, onClose, title, children }) {
         }}>
             <div className="card" style={{
                 width: '100%', maxWidth: '500px',
+                maxHeight: '90vh', // Limit height to 90% of viewport
+                display: 'flex', flexDirection: 'column', // Flex layout for header/content
                 background: 'white',
                 boxShadow: 'var(--shadow-hover)',
                 border: '1px solid var(--border)',
                 animation: 'fadeUp 0.2s ease-out'
             }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
                     <h2 style={{ fontSize: '1.25rem', color: 'var(--secondary)' }}>{title}</h2>
                     <button onClick={onClose} style={{
                         background: 'none', border: 'none',
@@ -26,7 +28,9 @@ export default function Modal({ isOpen, onClose, title, children }) {
                         &times;
                     </button>
                 </div>
-                <div>{children}</div>
+                <div style={{ overflowY: 'auto', paddingRight: '0.5rem' }}>
+                    {children}
+                </div>
             </div>
             <style>{`
         @keyframes fadeUp {

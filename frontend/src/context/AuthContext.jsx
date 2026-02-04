@@ -24,17 +24,38 @@ export const AuthProvider = ({ children }) => {
             const response = await api.post('/login', { email, password })
             const { access_token, user_name, user_type, user_cpf } = response.data
 
-            const userData = { name: user_name, type: user_type, cpf: user_cpf }
+            const userData = { name: user_name, type: user_type, cpf: user_cpf, email }
 
             localStorage.setItem('sigpesq_token', access_token)
             localStorage.setItem('sigpesq_user', JSON.stringify(userData))
 
             api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`
             setUser(userData)
-            return true
+            return { success: true }
         } catch (error) {
             console.error("Login failed", error)
-            return false
+            const message = error.response?.data?.detail || 'Erro ao fazer login'
+            return { success: false, error: message }
+        }
+    }
+
+    const register = async (name, email, password) => {
+        try {
+            const response = await api.post('/register', { name, email, password })
+            const { access_token, user_name, user_type, user_cpf } = response.data
+
+            const userData = { name: user_name, type: user_type, cpf: user_cpf, email }
+
+            localStorage.setItem('sigpesq_token', access_token)
+            localStorage.setItem('sigpesq_user', JSON.stringify(userData))
+
+            api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`
+            setUser(userData)
+            return { success: true }
+        } catch (error) {
+            console.error("Register failed", error)
+            const message = error.response?.data?.detail || 'Erro ao criar conta'
+            return { success: false, error: message }
         }
     }
 
@@ -46,7 +67,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, register, logout, loading, isAuthenticated: !!user }}>
             {children}
         </AuthContext.Provider>
     )

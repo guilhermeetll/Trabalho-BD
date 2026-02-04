@@ -1,18 +1,98 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from app.schemas import ProducaoCreate, ProducaoResponse
 from app.repositories.producao_repository import ProducaoRepository
-from typing import List
+from typing import List, Optional
+from datetime import datetime
 
 router = APIRouter()
 repository = ProducaoRepository()
 
-@router.post("/", response_model=ProducaoCreate)
+@router.post("/", response_model=ProducaoResponse)
 async def create_producao(prod: ProducaoCreate):
+    # Validar ano não futuro
+    ano_atual = datetime.now().year
+    if prod.ano_publicacao > ano_atual:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"O ano de publicação não pode ser maior que {ano_atual}"
+        )
+    
     try:
-        return await repository.create(prod)
+        await repository.create(prod)
+        
+        # Adicionar autores se fornecidos
+        if prod.autores:
+            for autor in prod.autores:
+                await repository.add_autor(prod.id_registro, autor.participante_cpf, autor.ordem)
+        
+        return await repository.get_by_id(prod.id_registro)
     except Exception as e:
+        if "Duplicate entry" in str(e):
+            raise HTTPException(status_code=400, detail="ID de registro já existe")
+        if "foreign key constraint" in str(e).lower():
+            raise HTTPException(status_code=400, detail="Projeto ou participante não encontrado")
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/", response_model=List[ProducaoResponse])
-async def list_producoes():
-    return await repository.list_all()
+async def list_producoes(
+    search: Optional[str] = Query(None, description="Buscar por título ou veículo"),
+    tipo: Optional[str] = Query(None, description="Filtrar por tipo"),
+    ano: Optional[int] = Query(None, description="Filtrar por ano")
+):
+    return await repository.list_all(search=search, tipo=tipo, ano=ano)
+
+@router.get("/anos", response_model=List[int])
+async def list_anos():
+    """Retorna lista de anos distintos para filtro"""
+    return await repository.get_anos()
+
+@router.get("/{id_registro:path}", response_model=ProducaoResponse)
+async def get_producao(id_registro: str):
+    producao = await repository.get_by_id(id_registro)
+    if not producao:
+        raise HTTPException(status_code=404, detail="Produção não encontrada")
+    return producao
+
+@router.put("/{id_registro:path}", response_model=ProducaoResponse)
+async def update_producao(id_registro: str, prod: ProducaoCreate):
+    """Atualiza uma produção existente"""
+    # Validar ano não futuro
+    ano_atual = datetime.now().year
+    if prod.ano_publicacao > ano_atual:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"O ano de publicação não pode ser maior que {ano_atual}"
+        )
+    
+    existing = await repository.get_by_id(id_registro)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Produção não encontrada")
+    
+    try:
+        # Atualizar produção
+        await repository.update(id_registro, prod)
+        
+        # Atualizar autores
+        await repository.remove_autores(id_registro)
+        if prod.autores:
+            for autor in prod.autores:
+                await repository.add_autor(id_registro, autor.participante_cpf, autor.ordem)
+        
+        return await repository.get_by_id(id_registro)
+    except Exception as e:
+        if "foreign key constraint" in str(e).lower():
+            raise HTTPException(status_code=400, detail="Projeto ou participante não encontrado")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.delete("/{id_registro:path}")
+async def delete_producao(id_registro: str):
+    """Deleta uma produção"""
+    existing = await repository.get_by_id(id_registro)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Produção não encontrada")
+    
+    try:
+        await repository.delete(id_registro)
+        return {"success": True, "message": "Produção deletada com sucesso"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

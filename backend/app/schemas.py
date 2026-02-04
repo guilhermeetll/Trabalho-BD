@@ -24,8 +24,16 @@ class ParticipanteBase(BaseModel):
 class ParticipanteCreate(ParticipanteBase):
     senha: str = Field(..., min_length=6, max_length=50)
 
+class ParticipanteUpdate(BaseModel):
+    nome: Optional[str] = None
+    email: Optional[EmailStr] = None
+    tipo: Optional[TipoParticipante] = None
+    senha: Optional[str] = Field(None, min_length=6, max_length=50)
+
+from datetime import date, datetime
+
 class ParticipanteResponse(ParticipanteBase):
-    criado_em: Optional[date] = None
+    criado_em: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -35,8 +43,8 @@ class ProjetoBase(BaseModel):
     codigo: str = Field(..., max_length=20)
     titulo: str
     descricao: Optional[str] = None
-    data_inicio: date
-    data_termino: Optional[date] = None
+    data_inicio: datetime # Changed from date
+    data_termino: Optional[datetime] = None # Changed from date
     situacao: SituacaoProjeto = SituacaoProjeto.EM_ANDAMENTO
     coordenador_cpf: str = Field(..., min_length=11, max_length=11)
 
@@ -75,9 +83,9 @@ class FinanciamentoBase(BaseModel):
     agencia_sigla: str
     tipo_fomento: str
     valor_total: float
-    data_inicio: date
-    data_fim: date
-
+    data_inicio: datetime # Changed from date
+    data_fim: Optional[datetime] = None # Changed from date
+    
 class FinanciamentoCreate(FinanciamentoBase):
     pass
 
@@ -85,6 +93,10 @@ class FinanciamentoResponse(FinanciamentoBase):
     pass
 
 # --- Producao ---
+class AutorInput(BaseModel):
+    participante_cpf: str
+    ordem: int
+
 class ProducaoBase(BaseModel):
     id_registro: str
     projeto_codigo: Optional[str] = None
@@ -94,8 +106,9 @@ class ProducaoBase(BaseModel):
     meio_divulgacao: Optional[str] = None
 
 class ProducaoCreate(ProducaoBase):
-    pass
+    autores: Optional[List[AutorInput]] = []
 
 class ProducaoResponse(ProducaoBase):
     projeto_titulo: Optional[str] = None
+    autores: Optional[List[dict]] = []
 

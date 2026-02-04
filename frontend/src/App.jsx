@@ -1,91 +1,225 @@
-import { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, Link, useLocation, useNavigate } from 'react-router-dom'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import DashboardPage from './pages/DashboardPage'
 import ProjetosPage from './pages/ProjetosPage'
 import ParticipantesPage from './pages/ParticipantesPage'
 import FinanciamentosPage from './pages/FinanciamentosPage'
 import ProducoesPage from './pages/ProducoesPage'
+import ConsultasPage from './pages/ConsultasPage'
 import LoginPage from './pages/LoginPage'
-import { AuthProvider, useAuth } from './context/AuthContext'
-
 import RegisterPage from './pages/RegisterPage'
+import LoadingSpinner from './components/LoadingSpinner'
+import ErrorBoundary from './components/ErrorBoundary'
 
-function AppContent() {
-  const [activeTab, setActiveTab] = useState('dashboard')
-  const [authView, setAuthView] = useState('login')
-  const { user, loading, logout } = useAuth()
+// Protected Route Component
+function ProtectedRoute({ children }) {
+  const { isAuthenticated, loading } = useAuth()
+  
+  if (loading) {
+    return <LoadingSpinner fullScreen />
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+  
+  return children
+}
 
-  if (loading) return <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>Carregando...</div>
+// Layout with Sidebar
+function Layout({ children }) {
+  const { user, logout } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
 
-  if (!user) {
-    if (authView === 'register') {
-      return <RegisterPage onSwitchToLogin={() => setAuthView('login')} />
-    }
-    return <LoginPage onSwitchToRegister={() => setAuthView('register')} />
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
   }
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'dashboard': return <DashboardPage />
-      case 'projetos': return <ProjetosPage />
-      case 'participantes': return <ParticipantesPage />
-      case 'financiamentos': return <FinanciamentosPage />
-      case 'producoes': return <ProducoesPage />
-      default: return <DashboardPage />
-    }
-  }
+  const isActive = (path) => location.pathname === path
 
   return (
-    <div className="app-container">
-      <aside className="sidebar">
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '2.5rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '1.8rem' }}>⚡</span> SIGPesq
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#f9fafb' }}>
+      {/* Sidebar */}
+      <aside style={{
+        width: '260px',
+        background: 'white',
+        borderRight: '1px solid var(--border)',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '2rem 1.5rem',
+        position: 'fixed',
+        height: '100vh',
+        overflowY: 'auto'
+      }}>
+        <h2 style={{ 
+          fontSize: '1.5rem', 
+          marginBottom: '2.5rem', 
+          color: 'var(--primary)', 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px',
+          fontWeight: '700'
+        }}>
+          <span style={{ fontSize: '1.8rem' }}>🔬</span> SIGPesq
         </h2>
 
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
-          <button
-            className={`btn-nav ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveTab('dashboard')}
+          <Link
+            to="/dashboard"
+            style={{
+              padding: '0.75rem 1rem',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              color: isActive('/dashboard') ? 'var(--primary)' : 'var(--text-muted)',
+              background: isActive('/dashboard') ? '#eff6ff' : 'transparent',
+              fontWeight: isActive('/dashboard') ? '600' : '400',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              transition: 'all 0.2s'
+            }}
           >
-            📊 Dashboard
-          </button>
-          <button
-            className={`btn-nav ${activeTab === 'projetos' ? 'active' : ''}`}
-            onClick={() => setActiveTab('projetos')}
+            <span>📊</span> Dashboard
+          </Link>
+          
+          <Link
+            to="/projetos"
+            style={{
+              padding: '0.75rem 1rem',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              color: isActive('/projetos') ? 'var(--primary)' : 'var(--text-muted)',
+              background: isActive('/projetos') ? '#eff6ff' : 'transparent',
+              fontWeight: isActive('/projetos') ? '600' : '400',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              transition: 'all 0.2s'
+            }}
           >
-            🚀 Projetos
-          </button>
-          <button
-            className={`btn-nav ${activeTab === 'participantes' ? 'active' : ''}`}
-            onClick={() => setActiveTab('participantes')}
+            <span>🚀</span> Projetos
+          </Link>
+
+          <Link
+            to="/participantes"
+            style={{
+              padding: '0.75rem 1rem',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              color: isActive('/participantes') ? 'var(--primary)' : 'var(--text-muted)',
+              background: isActive('/participantes') ? '#eff6ff' : 'transparent',
+              fontWeight: isActive('/participantes') ? '600' : '400',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              transition: 'all 0.2s'
+            }}
           >
-            👥 Participantes
-          </button>
-          <button
-            className={`btn-nav ${activeTab === 'financiamentos' ? 'active' : ''}`}
-            onClick={() => setActiveTab('financiamentos')}
+            <span>👥</span> Participantes
+          </Link>
+          
+          <Link
+            to="/financiamentos"
+            style={{
+              padding: '0.75rem 1rem',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              color: isActive('/financiamentos') ? 'var(--primary)' : 'var(--text-muted)',
+              background: isActive('/financiamentos') ? '#eff6ff' : 'transparent',
+              fontWeight: isActive('/financiamentos') ? '600' : '400',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              transition: 'all 0.2s'
+            }}
           >
-            💰 Financiamentos
-          </button>
-          <button
-            className={`btn-nav ${activeTab === 'producoes' ? 'active' : ''}`}
-            onClick={() => setActiveTab('producoes')}
+            <span>💰</span> Financiamentos
+          </Link>
+          
+          <Link
+            to="/producoes"
+            style={{
+              padding: '0.75rem 1rem',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              color: isActive('/producoes') ? 'var(--primary)' : 'var(--text-muted)',
+              background: isActive('/producoes') ? '#eff6ff' : 'transparent',
+              fontWeight: isActive('/producoes') ? '600' : '400',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              transition: 'all 0.2s'
+            }}
           >
-            📚 Produções
-          </button>
+            <span>📚</span> Produções
+          </Link>
+          
+          <Link
+            to="/consultas"
+            style={{
+              padding: '0.75rem 1rem',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              color: isActive('/consultas') ? 'var(--primary)' : 'var(--text-muted)',
+              background: isActive('/consultas') ? '#eff6ff' : 'transparent',
+              fontWeight: isActive('/consultas') ? '600' : '400',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              transition: 'all 0.2s'
+            }}
+          >
+            <span>📋</span> Consultas
+          </Link>
         </nav>
 
-        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
-          <div style={{ fontSize: '0.9rem', fontWeight: '500', marginBottom: '0.5rem' }}>{user.name}</div>
-          <button onClick={logout} className="btn-nav" style={{ color: '#ef4444', paddingLeft: 0 }}>
-            🚪 Sair
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '1rem' }}>
+          <div style={{ 
+            fontSize: '0.875rem', 
+            fontWeight: '600', 
+            marginBottom: '0.5rem',
+            color: 'var(--secondary)'
+          }}>
+            {user?.name}
+          </div>
+          <div style={{ 
+            fontSize: '0.75rem', 
+            color: 'var(--text-muted)',
+            marginBottom: '1rem'
+          }}>
+            {user?.email}
+          </div>
+          <button 
+            onClick={handleLogout}
+            style={{
+              width: '100%',
+              padding: '0.75rem 1rem',
+              background: 'white',
+              border: '1px solid #ef4444',
+              borderRadius: '6px',
+              color: '#ef4444',
+              cursor: 'pointer',
+              fontWeight: '500',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              justifyContent: 'center'
+            }}
+          >
+            <span>🚪</span> Sair
           </button>
         </div>
       </aside>
 
-      <main className="main-content">
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          {renderContent()}
-        </div>
+      {/* Main Content */}
+      <main style={{ 
+        marginLeft: '260px', 
+        flex: 1,
+        minHeight: '100vh'
+      }}>
+        {children}
       </main>
     </div>
   )
@@ -93,8 +227,57 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            
+            {/* Protected Routes */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <Layout><DashboardPage /></Layout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/projetos" element={
+              <ProtectedRoute>
+                <Layout><ProjetosPage /></Layout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/participantes" element={
+              <ProtectedRoute>
+                <Layout><ParticipantesPage /></Layout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/financiamentos" element={
+              <ProtectedRoute>
+                <Layout><FinanciamentosPage /></Layout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/producoes" element={
+              <ProtectedRoute>
+                <Layout><ProducoesPage /></Layout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/consultas" element={
+              <ProtectedRoute>
+                <Layout><ConsultasPage /></Layout>
+              </ProtectedRoute>
+            } />
+            
+            {/* Default Route */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   )
 }

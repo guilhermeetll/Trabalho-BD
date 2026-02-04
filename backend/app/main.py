@@ -27,12 +27,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from app.routers import participantes, projetos, financiamentos, producoes, auth
+from app.routers import participantes, projetos, financiamentos, producoes, auth, dashboard, consultas
 app.include_router(auth.router, tags=["Autenticação"])
 app.include_router(participantes.router, prefix="/participantes", tags=["Participantes"])
 app.include_router(projetos.router, prefix="/projetos", tags=["Projetos"])
 app.include_router(financiamentos.router, prefix="/financiamentos", tags=["Financiamentos"])
 app.include_router(producoes.router, prefix="/producoes", tags=["Produções"])
+app.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
+app.include_router(consultas.router, prefix="/consultas", tags=["Consultas"])
 
 @app.get("/")
 def read_root():
@@ -42,11 +44,10 @@ def read_root():
 async def health_check():
     from app.database import get_db_connection
     try:
-        conn = await get_db_connection()
-        async with conn.cursor() as cursor:
-            await cursor.execute("SELECT 1")
-            result = await cursor.fetchone()
-        conn.close()
+        async with get_db_connection() as conn:
+            async with conn.cursor() as cursor:
+                await cursor.execute("SELECT 1")
+                result = await cursor.fetchone()
         return {"status": "ok", "db": "connected", "result": result}
     except Exception as e:
         return {"status": "error", "db": str(e)}

@@ -1,6 +1,7 @@
 import aiomysql
 import os
 from fastapi import HTTPException
+from contextlib import asynccontextmanager
 
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_USER = os.getenv("DB_USER", "user")
@@ -18,7 +19,8 @@ async def init_pool():
             user=DB_USER,
             password=DB_PASSWORD,
             db=DB_NAME,
-            autocommit=True
+            autocommit=True,
+            charset='utf8mb4'
         )
         print("Database pool initialized successfully.")
     except Exception as e:
@@ -32,6 +34,7 @@ async def close_pool():
         await pool.wait_closed()
         print("Database pool closed.")
 
+@asynccontextmanager
 async def get_db_connection():
     global pool
     if not pool:
@@ -41,4 +44,8 @@ async def get_db_connection():
     if not pool:
         raise HTTPException(status_code=500, detail="Database connection not available")
     
-    return await pool.acquire()
+    conn = await pool.acquire()
+    try:
+        yield conn
+    finally:
+        pool.release(conn)
