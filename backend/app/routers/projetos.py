@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from app.schemas import ProjetoCreate, ProjetoResponse, ProjetoDetail
 from app.repositories.projeto_repository import ProjetoRepository
+from app.security import get_current_user
 from typing import List, Optional
 from pydantic import BaseModel
 from datetime import date
@@ -19,7 +20,10 @@ class VincularFinanciamentoRequest(BaseModel):
     valor_alocado: float
 
 @router.post("/", response_model=ProjetoResponse)
-async def create_projeto(projeto: ProjetoCreate):
+async def create_projeto(projeto: ProjetoCreate, current_user: dict = Depends(get_current_user)):
+    if current_user["type"] not in ["ADMIN", "DOCENTE"]:
+        raise HTTPException(status_code=403, detail="Apenas administradores ou docentes podem criar projetos")
+    
     try:
         await repository.create(projeto)
         return await repository.get_by_codigo(projeto.codigo)
@@ -27,50 +31,57 @@ async def create_projeto(projeto: ProjetoCreate):
         if "Duplicate entry" in str(e):
             raise HTTPException(status_code=400, detail="Código de projeto já existe")
         if "Regra violada" in str(e) or "coordenador" in str(e).lower():
-            raise HTTPException(status_code=400, detail="O coordenador deve ser um DOCENTE")
+            raise HTTPException(status_code=400, detail="O coordenador deve ser um DOCENTE ou ADMIN")
         raise HTTPException(status_code=400, detail=f"Erro ao criar projeto: {str(e)}")
 
 @router.get("/", response_model=List[ProjetoResponse])
 async def list_projetos(
     search: Optional[str] = Query(None, description="Buscar por título, código ou coordenador"),
-    situacao: Optional[str] = Query(None, description="Filtrar por situação")
+    situacao: Optional[str] = Query(None, description="Filtrar por situação"),
+    current_user: dict = Depends(get_current_user)
 ):
     return await repository.list_all(search=search, situacao=situacao)
 
 @router.get("/{codigo}", response_model=ProjetoResponse)
-async def get_projeto(codigo: str):
+async def get_projeto(codigo: str, current_user: dict = Depends(get_current_user)):
     projeto = await repository.get_by_codigo(codigo)
     if not projeto:
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
     return projeto
 
 @router.get("/{codigo}/detalhes", response_model=ProjetoDetail)
-async def get_projeto_detalhes(codigo: str):
+async def get_projeto_detalhes(codigo: str, current_user: dict = Depends(get_current_user)):
     projeto = await repository.get_details(codigo)
     if not projeto:
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
     return projeto
 
 @router.put("/{codigo}", response_model=ProjetoResponse)
-async def update_projeto(codigo: str, projeto: ProjetoCreate):
+async def update_projeto(codigo: str, projeto: ProjetoCreate, current_user: dict = Depends(get_current_user)):
     """Atualiza um projeto existente"""
     existing = await repository.get_by_codigo(codigo)
     if not existing:
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
     
+    if current_user["type"] != "ADMIN" and current_user["cpf"] != existing["coordenador_cpf"]:
+        raise HTTPException(status_code=403, detail="Apenas o administrador ou o coordenador podem atualizar o projeto")
+    
     try:
         return await repository.update(codigo, projeto)
     except Exception as e:
         if "Regra violada" in str(e) or "coordenador" in str(e).lower():
-            raise HTTPException(status_code=400, detail="O coordenador deve ser um DOCENTE")
+            raise HTTPException(status_code=400, detail="O coordenador deve ser um DOCENTE ou ADMIN")
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.delete("/{codigo}")
-async def delete_projeto(codigo: str):
+async def delete_projeto(codigo: str, current_user: dict = Depends(get_current_user)):
     """Deleta um projeto"""
     existing = await repository.get_by_codigo(codigo)
     if not existing:
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
+    
+    if current_user["type"] != "ADMIN" and current_user["cpf"] != existing["coordenador_cpf"]:
+        raise HTTPException(status_code=403, detail="Apenas o administrador ou o coordenador podem deletar o projeto")
     
     try:
         await repository.delete(codigo)
@@ -79,11 +90,14 @@ async def delete_projeto(codigo: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/{codigo}/participantes")
-async def vincular_participante(codigo: str, data: VincularParticipanteRequest):
+async def vincular_participante(codigo: str, data: VincularParticipanteRequest, current_user: dict = Depends(get_current_user)):
     """Vincula um participante a um projeto"""
     projeto = await repository.get_by_codigo(codigo)
     if not projeto:
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
+    
+    if current_user["type"] != "ADMIN" and current_user["cpf"] != projeto["coordenador_cpf"]:
+        raise HTTPException(status_code=403, detail="Apenas o administrador ou o coordenador podem vincular participantes")
     
     try:
         await repository.add_participante(
@@ -102,11 +116,20 @@ async def vincular_participante(codigo: str, data: VincularParticipanteRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/{codigo}/financiamentos")
-async def vincular_financiamento(codigo: str, data: VincularFinanciamentoRequest):
+async def vincular_financiamento(codigo: str, data: VincularFinanciamentoRequest, current_user: dict = Depends(get_current_user)):
     """Vincula um financiamento a um projeto"""
     projeto = await repository.get_by_codigo(codigo)
     if not projeto:
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
+    
+    if current_user["type"] != "ADMIN" and current_user["cpf"] != projeto["coordenador_cpf"]:
+        raise HTTPException(status_code=403, detail="Apenas o administrador ou o coordenador podem vincular financiamentos")
+    
+    if projeto['situacao'] == 'CONCLUIDO' or projeto['situacao'] == 'CANCELADO':
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Não é possível vincular financiamento a um projeto {projeto['situacao'].lower()}."
+        )
     
     try:
         await repository.add_financiamento(codigo, data.financiamento_codigo, data.valor_alocado)

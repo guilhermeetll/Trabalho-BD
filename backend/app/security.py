@@ -2,6 +2,8 @@ from datetime import datetime, timedelta
 from typing import Optional
 from passlib.context import CryptContext
 import jwt
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 # Configuração de Segurança
 # Em produção, usar variável de ambiente!
@@ -10,6 +12,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+security = HTTPBearer()
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
@@ -39,3 +42,19 @@ def decode_token(token: str):
         return None
     except jwt.JWTError:
         return None
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Dependência para obter o usuário atual do token JWT"""
+    token = credentials.credentials
+    payload = decode_token(token)
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido ou expirado",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return {
+        "cpf": payload.get("sub"),
+        "name": payload.get("name"),
+        "type": payload.get("type")
+    }

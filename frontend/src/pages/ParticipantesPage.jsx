@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { participantesAPI } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 import Modal from '../components/Modal'
 import Card from '../components/Card'
 import FormField from '../components/FormField'
@@ -8,6 +9,9 @@ import FilterSelect from '../components/FilterSelect'
 import LoadingSpinner from '../components/LoadingSpinner'
 
 export default function ParticipantesPage() {
+    const { user } = useAuth()
+    const isAdmin = user?.type === 'ADMIN'
+
     const [participantes, setParticipantes] = useState([])
     const [filteredParticipantes, setFilteredParticipantes] = useState([])
     const [loading, setLoading] = useState(true)
@@ -157,20 +161,22 @@ export default function ParticipantesPage() {
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h1 style={{ fontSize: '2rem', color: 'var(--secondary)' }}>Participantes</h1>
-                <button
-                    onClick={openCreateModal}
-                    style={{
-                        padding: '0.75rem 1.5rem',
-                        background: 'var(--primary)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontWeight: '500'
-                    }}
-                >
-                    + Novo Participante
-                </button>
+                {isAdmin && (
+                    <button
+                        onClick={openCreateModal}
+                        style={{
+                            padding: '0.75rem 1.5rem',
+                            background: 'var(--primary)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: '500'
+                        }}
+                    >
+                        + Novo Participante
+                    </button>
+                )}
             </div>
 
             {/* Search and Filters */}
@@ -233,36 +239,40 @@ export default function ParticipantesPage() {
                             </div>
 
                             <div style={{ display: 'flex', gap: '0.5rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
-                                <button
-                                    onClick={() => openEditModal(participante)}
-                                    style={{
-                                        flex: 1,
-                                        padding: '0.5rem',
-                                        background: 'white',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        color: 'var(--secondary)',
-                                        fontWeight: '500'
-                                    }}
-                                >
-                                    Editar
-                                </button>
-                                <button
-                                    onClick={() => openDeleteModal(participante)}
-                                    style={{
-                                        flex: 1,
-                                        padding: '0.5rem',
-                                        background: 'white',
-                                        border: '1px solid #ef4444',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        color: '#ef4444',
-                                        fontWeight: '500'
-                                    }}
-                                >
-                                    Excluir
-                                </button>
+                                {(isAdmin || user?.cpf === participante.cpf) && (
+                                    <button
+                                        onClick={() => openEditModal(participante)}
+                                        style={{
+                                            flex: 1,
+                                            padding: '0.5rem',
+                                            background: 'white',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
+                                            color: 'var(--secondary)',
+                                            fontWeight: '500'
+                                        }}
+                                    >
+                                        Editar
+                                    </button>
+                                )}
+                                {isAdmin && (
+                                    <button
+                                        onClick={() => openDeleteModal(participante)}
+                                        style={{
+                                            flex: 1,
+                                            padding: '0.5rem',
+                                            background: 'white',
+                                            border: '1px solid #ef4444',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
+                                            color: '#ef4444',
+                                            fontWeight: '500'
+                                        }}
+                                    >
+                                        Excluir
+                                    </button>
+                                )}
                             </div>
                         </Card>
                     ))
@@ -312,19 +322,21 @@ export default function ParticipantesPage() {
                         required
                     />
 
-                    <FormField
-                        label="Tipo"
-                        type="select"
-                        name="tipo"
-                        value={formData.tipo}
-                        onChange={handleInputChange}
-                        options={[
-                            { value: 'DOCENTE', label: 'Docente' },
-                            { value: 'DISCENTE', label: 'Discente' },
-                            { value: 'TECNICO', label: 'Técnico' }
-                        ]}
-                        required
-                    />
+                    {isAdmin && (
+                        <FormField
+                            label="Tipo"
+                            type="select"
+                            name="tipo"
+                            value={formData.tipo}
+                            onChange={handleInputChange}
+                            options={[
+                                { value: 'DOCENTE', label: 'Docente' },
+                                { value: 'DISCENTE', label: 'Discente' },
+                                { value: 'TECNICO', label: 'Técnico' }
+                            ]}
+                            required
+                        />
+                    )}
 
                     <FormField
                         label={editingParticipante ? "Nova Senha (opcional)" : "Senha"}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { producoesAPI, projetosAPI, participantesAPI } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 import Modal from '../components/Modal'
 import Card from '../components/Card'
 import FormField from '../components/FormField'
@@ -8,6 +9,9 @@ import FilterSelect from '../components/FilterSelect'
 import LoadingSpinner from '../components/LoadingSpinner'
 
 export default function ProducoesPage() {
+    const { user } = useAuth()
+    const isAdmin = user?.type === 'ADMIN'
+
     const [producoes, setProducoes] = useState([])
     const [filteredProducoes, setFilteredProducoes] = useState([])
     const [projetos, setProjetos] = useState([])
@@ -32,7 +36,7 @@ export default function ProducoesPage() {
     })
 
     const [autores, setAutores] = useState([])
-    const [novoAutor, setNovoAutor] = useState({ participante_cpf: '', ordem: 1 })
+    const [novoAutor, setNovoAutor] = useState({ cpf: '', ordem: 1 })
 
     useEffect(() => {
         loadData()
@@ -124,34 +128,37 @@ export default function ProducoesPage() {
 
     function handleInputChange(e) {
         const { name, value } = e.target
-        setFormData(prev => ({ ...prev, [name]: value }))
+        setFormData(prev => ({ 
+            ...prev, 
+            [name]: name === 'ano_publicacao' ? parseInt(value) || '' : value 
+        }))
     }
 
     function adicionarAutor() {
-        if (!novoAutor.participante_cpf) {
+        if (!novoAutor.cpf) {
             alert('Selecione um participante')
             return
         }
 
-        const participante = participantes.find(p => p.cpf === novoAutor.participante_cpf)
+        const participante = participantes.find(p => p.cpf === novoAutor.cpf)
         if (!participante) return
 
-        const autorExiste = autores.some(a => a.participante_cpf === novoAutor.participante_cpf)
+        const autorExiste = autores.some(a => a.cpf === novoAutor.cpf)
         if (autorExiste) {
             alert('Este participante já foi adicionado como autor')
             return
         }
 
         setAutores([...autores, {
-            participante_cpf: novoAutor.participante_cpf,
+            cpf: novoAutor.cpf,
             nome: participante.nome,
             ordem: novoAutor.ordem
         }])
-        setNovoAutor({ participante_cpf: '', ordem: autores.length + 2 })
+        setNovoAutor({ cpf: '', ordem: autores.length + 2 })
     }
 
     function removerAutor(cpf) {
-        setAutores(autores.filter(a => a.participante_cpf !== cpf))
+        setAutores(autores.filter(a => a.cpf !== cpf))
     }
 
     function moverAutor(index, direcao) {
@@ -182,7 +189,7 @@ export default function ProducoesPage() {
         const payload = {
             ...formData,
             autores: autores.map(a => ({
-                participante_cpf: a.participante_cpf,
+                participante_cpf: a.cpf,
                 ordem: a.ordem
             }))
         }
@@ -319,36 +326,43 @@ export default function ProducoesPage() {
                                         </div>
 
                                         <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
-                                            <button
-                                                onClick={() => openEditModal(producao)}
-                                                style={{
-                                                    padding: '0.375rem 0.75rem',
-                                                    background: 'white',
-                                                    border: '1px solid var(--border)',
-                                                    borderRadius: '4px',
-                                                    cursor: 'pointer',
-                                                    color: 'var(--secondary)',
-                                                    fontWeight: '500',
-                                                    fontSize: '0.875rem'
-                                                }}
-                                            >
-                                                Editar
-                                            </button>
-                                            <button
-                                                onClick={() => openDeleteModal(producao)}
-                                                style={{
-                                                    padding: '0.375rem 0.75rem',
-                                                    background: 'white',
-                                                    border: '1px solid #ef4444',
-                                                    borderRadius: '4px',
-                                                    cursor: 'pointer',
-                                                    color: '#ef4444',
-                                                    fontWeight: '500',
-                                                    fontSize: '0.875rem'
-                                                }}
-                                            >
-                                                Excluir
-                                            </button>
+                                            {(isAdmin || 
+                                              producao.autores?.some(a => a.cpf === user?.cpf) || 
+                                              projetos.find(p => p.codigo === producao.projeto_codigo)?.coordenador_cpf === user?.cpf) && (
+                                                <button
+                                                    onClick={() => openEditModal(producao)}
+                                                    style={{
+                                                        padding: '0.375rem 0.75rem',
+                                                        background: 'white',
+                                                        border: '1px solid var(--border)',
+                                                        borderRadius: '4px',
+                                                        cursor: 'pointer',
+                                                        color: 'var(--secondary)',
+                                                        fontWeight: '500',
+                                                        fontSize: '0.875rem'
+                                                    }}
+                                                >
+                                                    Editar
+                                                </button>
+                                            )}
+                                            {(isAdmin || 
+                                              projetos.find(p => p.codigo === producao.projeto_codigo)?.coordenador_cpf === user?.cpf) && (
+                                                <button
+                                                    onClick={() => openDeleteModal(producao)}
+                                                    style={{
+                                                        padding: '0.375rem 0.75rem',
+                                                        background: 'white',
+                                                        border: '1px solid #ef4444',
+                                                        borderRadius: '4px',
+                                                        cursor: 'pointer',
+                                                        color: '#ef4444',
+                                                        fontWeight: '500',
+                                                        fontSize: '0.875rem'
+                                                    }}
+                                                >
+                                                    Excluir
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -416,6 +430,8 @@ export default function ProducoesPage() {
                         value={formData.id_registro}
                         onChange={handleInputChange}
                         placeholder="10.xxxx/xxxxx"
+                        disabled={!!editingProducao}
+                        required
                     />
 
                     <FormField
@@ -494,8 +510,8 @@ export default function ProducoesPage() {
                                     label="Adicionar Autor"
                                     type="select"
                                     name="novo_autor"
-                                    value={novoAutor.participante_cpf}
-                                    onChange={(e) => setNovoAutor({ ...novoAutor, participante_cpf: e.target.value })}
+                                    value={novoAutor.cpf}
+                                    onChange={(e) => setNovoAutor({ ...novoAutor, cpf: e.target.value })}
                                     options={participantes.map(p => ({ value: p.cpf, label: p.nome }))}
                                 />
                             </div>

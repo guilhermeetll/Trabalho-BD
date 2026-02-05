@@ -5,6 +5,7 @@ from datetime import date
 
 # Enums
 class TipoParticipante(str, Enum):
+    ADMIN = "ADMIN"
     DOCENTE = "DOCENTE"
     DISCENTE = "DISCENTE"
     TECNICO = "TECNICO"

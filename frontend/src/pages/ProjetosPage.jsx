@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { projetosAPI, participantesAPI, financiamentosAPI, consultasAPI } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 import Modal from '../components/Modal'
 import Card from '../components/Card'
 import FormField from '../components/FormField'
@@ -9,6 +10,10 @@ import LoadingSpinner from '../components/LoadingSpinner'
 import { formatDate } from '../utils/formatters'
 
 export default function ProjetosPage() {
+    const { user } = useAuth()
+    const isAdmin = user?.type === 'ADMIN'
+    const isDocente = user?.type === 'DOCENTE'
+
     const [projetos, setProjetos] = useState([])
     const [filteredProjetos, setFilteredProjetos] = useState([])
     const [coordenadores, setCoordenadores] = useState([])
@@ -44,12 +49,13 @@ export default function ProjetosPage() {
     const [vinculoPartData, setVinculoPartData] = useState({
         participante_cpf: '',
         funcao: '',
-        data_inicio: '',
-        data_termino: ''
+        data_entrada: '',
+        data_saida: ''
     })
 
     const [vinculoFinData, setVinculoFinData] = useState({
-        financiamento_id: ''
+        financiamento_codigo: '',
+        valor_alocado: 0
     })
 
     useEffect(() => {
@@ -153,8 +159,8 @@ export default function ProjetosPage() {
             setVinculoPartData({
                 participante_cpf: '',
                 funcao: '',
-                data_inicio: '',
-                data_termino: ''
+                data_entrada: '',
+                data_saida: ''
             })
             setIsVincularPartModalOpen(true)
         } catch (error) {
@@ -167,7 +173,10 @@ export default function ProjetosPage() {
         try {
             const response = await financiamentosAPI.getAll()
             setFinanciamentosDisponiveis(response.data)
-            setVinculoFinData({ financiamento_id: '' })
+            setVinculoFinData({ 
+                financiamento_codigo: '',
+                valor_alocado: 0
+            })
             setIsVincularFinModalOpen(true)
         } catch (error) {
             console.error('Erro ao carregar financiamentos:', error)
@@ -225,7 +234,11 @@ export default function ProjetosPage() {
     async function handleVincularParticipante(e) {
         e.preventDefault()
         try {
-            await projetosAPI.addParticipante(selectedProjeto.codigo, vinculoPartData)
+            const payload = {
+                ...vinculoPartData,
+                data_saida: vinculoPartData.data_saida || null
+            }
+            await projetosAPI.addParticipante(selectedProjeto.codigo, payload)
             setIsVincularPartModalOpen(false)
             openDetailsModal(selectedProjeto)
         } catch (error) {
@@ -263,20 +276,22 @@ export default function ProjetosPage() {
         <div style={{ padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h1 style={{ fontSize: '2rem', color: 'var(--secondary)' }}>Projetos de Pesquisa</h1>
-                <button
-                    onClick={openCreateModal}
-                    style={{
-                        padding: '0.75rem 1.5rem',
-                        background: 'var(--primary)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontWeight: '500'
-                    }}
-                >
-                    + Novo Projeto
-                </button>
+                {(isAdmin || isDocente) && (
+                    <button
+                        onClick={openCreateModal}
+                        style={{
+                            padding: '0.75rem 1.5rem',
+                            background: 'var(--primary)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: '500'
+                        }}
+                    >
+                        + Novo Projeto
+                    </button>
+                )}
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
@@ -343,36 +358,40 @@ export default function ProjetosPage() {
                                 >
                                     Ver Detalhes
                                 </button>
-                                <button
-                                    onClick={() => openEditModal(projeto)}
-                                    style={{
-                                        padding: '0.5rem',
-                                        background: 'white',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        color: 'var(--secondary)',
-                                        fontWeight: '500',
-                                        fontSize: '0.875rem'
-                                    }}
-                                >
-                                    Editar
-                                </button>
-                                <button
-                                    onClick={() => openDeleteModal(projeto)}
-                                    style={{
-                                        padding: '0.5rem',
-                                        background: 'white',
-                                        border: '1px solid #ef4444',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        color: '#ef4444',
-                                        fontWeight: '500',
-                                        fontSize: '0.875rem'
-                                    }}
-                                >
-                                    Excluir
-                                </button>
+                                {(isAdmin || user?.cpf === projeto.coordenador_cpf) && (
+                                    <>
+                                        <button
+                                            onClick={() => openEditModal(projeto)}
+                                            style={{
+                                                padding: '0.5rem',
+                                                background: 'white',
+                                                border: '1px solid var(--border)',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer',
+                                                color: 'var(--secondary)',
+                                                fontWeight: '500',
+                                                fontSize: '0.875rem'
+                                            }}
+                                        >
+                                            Editar
+                                        </button>
+                                        <button
+                                            onClick={() => openDeleteModal(projeto)}
+                                            style={{
+                                                padding: '0.5rem',
+                                                background: 'white',
+                                                border: '1px solid #ef4444',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer',
+                                                color: '#ef4444',
+                                                fontWeight: '500',
+                                                fontSize: '0.875rem'
+                                            }}
+                                        >
+                                            Excluir
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </Card>
                     ))
@@ -567,21 +586,23 @@ export default function ProjetosPage() {
 
                         {activeTab === 'participantes' && (
                             <div>
-                                <button
-                                    onClick={openVincularPartModal}
-                                    style={{
-                                        padding: '0.5rem 1rem',
-                                        background: 'var(--primary)',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        marginBottom: '1rem',
-                                        fontSize: '0.875rem'
-                                    }}
-                                >
-                                    + Vincular Participante
-                                </button>
+                                {(isAdmin || user?.cpf === projetoDetails.coordenador_cpf) && (
+                                    <button
+                                        onClick={openVincularPartModal}
+                                        style={{
+                                            padding: '0.5rem 1rem',
+                                            background: 'var(--primary)',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
+                                            marginBottom: '1rem',
+                                            fontSize: '0.875rem'
+                                        }}
+                                    >
+                                        + Vincular Participante
+                                    </button>
+                                )}
 
                                 {projetoDetails.participantes && projetoDetails.participantes.length > 0 ? (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -603,29 +624,32 @@ export default function ProjetosPage() {
 
                         {activeTab === 'financiamentos' && (
                             <div>
-                                <button
-                                    onClick={openVincularFinModal}
-                                    style={{
-                                        padding: '0.5rem 1rem',
-                                        background: 'var(--primary)',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        marginBottom: '1rem',
-                                        fontSize: '0.875rem'
-                                    }}
-                                >
-                                    + Vincular Financiamento
-                                </button>
+                                {(isAdmin || user?.cpf === projetoDetails.coordenador_cpf) && (
+                                    <button
+                                        onClick={openVincularFinModal}
+                                        style={{
+                                            padding: '0.5rem 1rem',
+                                            background: 'var(--primary)',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
+                                            marginBottom: '1rem',
+                                            fontSize: '0.875rem'
+                                        }}
+                                    >
+                                        + Vincular Financiamento
+                                    </button>
+                                )}
 
                                 {projetoDetails.financiamentos && projetoDetails.financiamentos.length > 0 ? (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                         {projetoDetails.financiamentos.map((fin, index) => (
                                             <div key={index} style={{ padding: '0.75rem', background: '#f9fafb', borderRadius: '4px', fontSize: '0.875rem' }}>
-                                                <p><strong>{fin.agencia}</strong></p>
+                                                <p><strong>{fin.agencia_sigla}</strong></p>
                                                 <p style={{ color: 'var(--text-muted)' }}>Tipo: {fin.tipo_fomento}</p>
-                                                <p style={{ color: 'var(--text-muted)' }}>Processo: {fin.numero_processo}</p>
+                                                <p style={{ color: 'var(--text-muted)' }}>Processo: {fin.codigo_processo}</p>
+                                                <p style={{ color: 'var(--text-muted)' }}>Valor Alocado: {fin.valor_alocado}</p>
                                             </div>
                                         ))}
                                     </div>
@@ -667,18 +691,18 @@ export default function ProjetosPage() {
                     <FormField
                         label="Data de Início"
                         type="date"
-                        name="data_inicio"
-                        value={vinculoPartData.data_inicio}
-                        onChange={(e) => setVinculoPartData({ ...vinculoPartData, data_inicio: e.target.value })}
+                        name="data_entrada"
+                        value={vinculoPartData.data_entrada}
+                        onChange={(e) => setVinculoPartData({ ...vinculoPartData, data_entrada: e.target.value })}
                         required
                     />
 
                     <FormField
                         label="Data de Fim"
                         type="date"
-                        name="data_termino"
-                        value={vinculoPartData.data_termino}
-                        onChange={(e) => setVinculoPartData({ ...vinculoPartData, data_termino: e.target.value })}
+                        name="data_saida"
+                        value={vinculoPartData.data_saida}
+                        onChange={(e) => setVinculoPartData({ ...vinculoPartData, data_saida: e.target.value })}
                     />
 
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem' }}>
@@ -726,13 +750,22 @@ export default function ProjetosPage() {
                     <FormField
                         label="Financiamento"
                         type="select"
-                        name="financiamento_id"
-                        value={vinculoFinData.financiamento_id}
-                        onChange={(e) => setVinculoFinData({ financiamento_id: e.target.value })}
+                        name="financiamento_codigo"
+                        value={vinculoFinData.financiamento_codigo}
+                        onChange={(e) => setVinculoFinData({ ...vinculoFinData, financiamento_codigo: e.target.value })}
                         options={financiamentosDisponiveis.map(f => ({
                             value: f.codigo_processo,
                             label: `${f.agencia} - ${f.tipo_fomento} (${f.numero_processo})`
                         }))}
+                        required
+                    />
+
+                    <FormField
+                        label="Valor Alocado"
+                        type="number"
+                        name="valor_alocado"
+                        value={vinculoFinData.valor_alocado}
+                        onChange={(e) => setVinculoFinData({ ...vinculoFinData, valor_alocado: parseFloat(e.target.value) })}
                         required
                     />
 

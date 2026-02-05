@@ -128,9 +128,9 @@ export default function ConsultasPage() {
 
     const getStatusBadgeColor = (situacao) => {
         const colors = {
-            'Em Andamento': 'badge-blue',
-            'Concluído': 'badge-green',
-            'Cancelado': 'badge-red'
+            'EM_ANDAMENTO': 'badge-blue',
+            'CONCLUIDO': 'badge-green',
+            'CANCELADO': 'badge-red'
         }
         return colors[situacao] || 'badge-gray'
     }

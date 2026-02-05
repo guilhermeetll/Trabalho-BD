@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { financiamentosAPI, projetosAPI, consultasAPI } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 import Modal from '../components/Modal'
 import Card from '../components/Card'
 import FormField from '../components/FormField'
@@ -9,6 +10,9 @@ import LoadingSpinner from '../components/LoadingSpinner'
 import { formatCurrency, formatDate } from '../utils/formatters'
 
 export default function FinanciamentosPage() {
+    const { user } = useAuth()
+    const isAdmin = user?.type === 'ADMIN'
+
     const [financiamentos, setFinanciamentos] = useState([])
     const [filteredFinanciamentos, setFilteredFinanciamentos] = useState([])
     const [totalFinanciamentos, setTotalFinanciamentos] = useState(0)
@@ -27,6 +31,7 @@ export default function FinanciamentosPage() {
 
     const [projetosDisponiveis, setProjetosDisponiveis] = useState([])
     const [projetoSelecionado, setProjetoSelecionado] = useState('')
+    const [valorAlocadoParaVinculo, setValorAlocadoParaVinculo] = useState('')
 
     const [formData, setFormData] = useState({
         agencia_sigla: '',
@@ -179,11 +184,19 @@ export default function FinanciamentosPage() {
 
     async function handleVincular(e) {
         e.preventDefault()
+        
+        if (parseFloat(valorAlocadoParaVinculo) <= 0) {
+            alert('O valor alocado deve ser maior que zero')
+            return
+        }
+
         try {
             await projetosAPI.addFinanciamento(projetoSelecionado, {
-                financiamento_id: vinculandoFinanciamento.codigo_processo
+                financiamento_codigo: vinculandoFinanciamento.codigo_processo,
+                valor_alocado: parseFloat(valorAlocadoParaVinculo)
             })
             setIsVincularModalOpen(false)
+            setValorAlocadoParaVinculo('') // Reset the value
             alert('Financiamento vinculado com sucesso!')
         } catch (error) {
             console.error('Erro ao vincular financiamento:', error)
@@ -201,20 +214,22 @@ export default function FinanciamentosPage() {
         <div style={{ padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h1 style={{ fontSize: '2rem', color: 'var(--secondary)' }}>Financiamentos</h1>
-                <button
-                    onClick={openCreateModal}
-                    style={{
-                        padding: '0.75rem 1.5rem',
-                        background: 'var(--primary)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontWeight: '500'
-                    }}
-                >
-                    + Novo Financiamento
-                </button>
+                {isAdmin && (
+                    <button
+                        onClick={openCreateModal}
+                        style={{
+                            padding: '0.75rem 1.5rem',
+                            background: 'var(--primary)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: '500'
+                        }}
+                    >
+                        + Novo Financiamento
+                    </button>
+                )}
             </div>
 
             {/* Total Card */}
@@ -292,36 +307,40 @@ export default function FinanciamentosPage() {
                                 >
                                     Vincular
                                 </button>
-                                <button
-                                    onClick={() => openEditModal(financiamento)}
-                                    style={{
-                                        padding: '0.5rem',
-                                        background: 'white',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        color: 'var(--secondary)',
-                                        fontWeight: '500',
-                                        fontSize: '0.875rem'
-                                    }}
-                                >
-                                    Editar
-                                </button>
-                                <button
-                                    onClick={() => openDeleteModal(financiamento)}
-                                    style={{
-                                        padding: '0.5rem',
-                                        background: 'white',
-                                        border: '1px solid #ef4444',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        color: '#ef4444',
-                                        fontWeight: '500',
-                                        fontSize: '0.875rem'
-                                    }}
-                                >
-                                    Excluir
-                                </button>
+                                {isAdmin && (
+                                    <>
+                                        <button
+                                            onClick={() => openEditModal(financiamento)}
+                                            style={{
+                                                padding: '0.5rem',
+                                                background: 'white',
+                                                border: '1px solid var(--border)',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer',
+                                                color: 'var(--secondary)',
+                                                fontWeight: '500',
+                                                fontSize: '0.875rem'
+                                            }}
+                                        >
+                                            Editar
+                                        </button>
+                                        <button
+                                            onClick={() => openDeleteModal(financiamento)}
+                                            style={{
+                                                padding: '0.5rem',
+                                                background: 'white',
+                                                border: '1px solid #ef4444',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer',
+                                                color: '#ef4444',
+                                                fontWeight: '500',
+                                                fontSize: '0.875rem'
+                                            }}
+                                        >
+                                            Excluir
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </Card>
                     ))
@@ -438,7 +457,7 @@ export default function FinanciamentosPage() {
             >
                 <form onSubmit={handleVincular}>
                     <p style={{ marginBottom: '1rem', color: 'var(--text-muted)' }}>
-                        Vincular financiamento <strong>{vinculandoFinanciamento?.agencia_sigla}</strong> a um projeto:
+                        Vincular financiamento <strong>{vinculandoFinanciamento?.agencia_sigla} - {vinculandoFinanciamento?.codigo_processo}</strong> a um projeto:
                     </p>
 
                     <FormField
@@ -451,6 +470,16 @@ export default function FinanciamentosPage() {
                             value: p.codigo,
                             label: `${p.codigo} - ${p.titulo}`
                         }))}
+                        required
+                    />
+
+                    <FormField
+                        label="Valor a ser Alocado"
+                        type="number"
+                        name="valor_alocado"
+                        value={valorAlocadoParaVinculo}
+                        onChange={(e) => setValorAlocadoParaVinculo(e.target.value)}
+                        placeholder="0.00"
                         required
                     />
 

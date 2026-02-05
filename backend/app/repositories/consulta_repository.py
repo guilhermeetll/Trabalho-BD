@@ -50,34 +50,50 @@ class ConsultaRepository:
                 }
     
     async def get_producoes_by_ano(self, ano: int):
-        """Retorna produções de um ano agrupadas por tipo"""
+        """Retorna produções de um ano agrupadas por tipo (Formatado para o Frontend)"""
         async with get_db_connection() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cursor:
-                sql = """
-                    SELECT p.tipo, COUNT(*) as quantidade,
-                           GROUP_CONCAT(p.titulo SEPARATOR '|||') as titulos
-                    FROM producoes p
-                    WHERE p.ano_publicacao = %s
-                    GROUP BY p.tipo
-                    ORDER BY quantidade DESC
-                """
-                await cursor.execute(sql, (ano,))
-                grupos = await cursor.fetchall()
+                # 1. Buscar todos os tipos que tiveram produções no ano
+                await cursor.execute(
+                    "SELECT DISTINCT tipo FROM producoes WHERE ano_publicacao = %s ORDER BY tipo",
+                    (ano,)
+                )
+                tipos = await cursor.fetchall()
                 
-                # Buscar todas as produções do ano para detalhes
-                sql_detalhes = """
-                    SELECT p.id_registro, p.titulo, p.tipo, p.meio_divulgacao,
-                           proj.titulo as projeto_titulo
-                    FROM producoes p
-                    LEFT JOIN projetos proj ON p.projeto_codigo = proj.codigo
-                    WHERE p.ano_publicacao = %s
-                    ORDER BY p.tipo, p.titulo
-                """
-                await cursor.execute(sql_detalhes, (ano,))
-                producoes = await cursor.fetchall()
+                resultado = []
                 
-                return {
-                    'ano': ano,
-                    'grupos': grupos,
-                    'producoes': producoes
-                }
+                for t in tipos:
+                    tipo_nome = t['tipo']
+                    
+                    # 2. Buscar produções deste tipo no ano
+                    sql = """
+                        SELECT p.id_registro, p.titulo, p.tipo, p.meio_divulgacao as veiculo,
+                               proj.titulo as projeto_titulo
+                        FROM producoes p
+                        LEFT JOIN projetos proj ON p.projeto_codigo = proj.codigo
+                        WHERE p.ano_publicacao = %s AND p.tipo = %s
+                        ORDER BY p.titulo
+                    """
+                    await cursor.execute(sql, (ano, tipo_nome))
+                    producoes = await cursor.fetchall()
+                    
+                    # 3. Para cada produção, buscar nomes dos autores (concatenados)
+                    for prod in producoes:
+                        sql_autores = """
+                            SELECT GROUP_CONCAT(part.nome ORDER BY pa.ordem SEPARATOR ', ') as nomes
+                            FROM participantes part
+                            JOIN producoes_autores pa ON part.cpf = pa.participante_cpf
+                            WHERE pa.producao_id = %s
+                        """
+                        await cursor.execute(sql_autores, (prod['id_registro'],))
+                        autores_res = await cursor.fetchone()
+                        prod['autores'] = autores_res['nomes'] if autores_res else ""
+                        prod['doi'] = prod['id_registro'] # Mapear para o frontend
+                    
+                    resultado.append({
+                        'tipo_producao': tipo_nome,
+                        'total': len(producoes),
+                        'producoes': producoes
+                    })
+                
+                return resultado

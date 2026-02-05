@@ -1,7 +1,4 @@
 -- Script de Criação do Banco de Dados - SIGPesq (Versão Final)
--- Autor: Antigravity AI
--- Data: 2026-02-03
--- Este script atende aos requisitos de modelagem, integridade e regras de negócio.
 
 CREATE DATABASE IF NOT EXISTS sigpesq;
 USE sigpesq;
@@ -14,7 +11,7 @@ CREATE TABLE IF NOT EXISTS participantes (
     cpf CHAR(11) NOT NULL,
     nome VARCHAR(100) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
-    tipo ENUM('DOCENTE', 'DISCENTE', 'TECNICO') NOT NULL,
+    tipo ENUM('ADMIN', 'DOCENTE', 'DISCENTE', 'TECNICO') NOT NULL,
     senha_hash VARCHAR(255) NOT NULL DEFAULT 'hash_padrao', -- Simplificação
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (cpf)
@@ -95,7 +92,7 @@ CREATE TABLE IF NOT EXISTS producoes (
     id_registro VARCHAR(50) NOT NULL, -- DOI ou ID interno
     projeto_codigo VARCHAR(20), -- Pode ser NULL (independente), mas a regra diz vinculada
     titulo VARCHAR(250) NOT NULL,
-    tipo ENUM('ARTIGO', 'SOFTWARE', 'RELATORIO', 'LIVRO') NOT NULL,
+    tipo ENUM('ARTIGO', 'LIVRO', 'CAPITULO', 'TRABALHO', 'RESUMO') NOT NULL,
     ano_publicacao INT NOT NULL,
     meio_divulgacao VARCHAR(200),
     PRIMARY KEY (id_registro),
@@ -117,15 +114,15 @@ CREATE TABLE IF NOT EXISTS producoes_autores (
 
 DELIMITER //
 
--- Regra: Apenas DOCENTES podem ser coordenadores de projeto.
+-- Regra: Apenas DOCENTES ou ADMINS podem ser coordenadores de projeto.
 CREATE TRIGGER trg_verificar_coordenador_insert BEFORE INSERT ON projetos
 FOR EACH ROW
 BEGIN
     DECLARE tipo_part VARCHAR(20);
     SELECT tipo INTO tipo_part FROM participantes WHERE cpf = NEW.coordenador_cpf;
     
-    IF tipo_part != 'DOCENTE' THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Regra violada: O coordenador do projeto deve ser um DOCENTE.';
+    IF tipo_part != 'DOCENTE' AND tipo_part != 'ADMIN' THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Regra violada: O coordenador do projeto deve ser um DOCENTE ou ADMIN.';
     END IF;
 END;
 //
@@ -137,8 +134,8 @@ BEGIN
     IF NEW.coordenador_cpf != OLD.coordenador_cpf THEN
         SELECT tipo INTO tipo_part FROM participantes WHERE cpf = NEW.coordenador_cpf;
         
-        IF tipo_part != 'DOCENTE' THEN
-            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Regra violada: O coordenador do projeto deve ser um DOCENTE.';
+        IF tipo_part != 'DOCENTE' AND tipo_part != 'ADMIN' THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Regra violada: O coordenador do projeto deve ser um DOCENTE ou ADMIN.';
         END IF;
     END IF;
 END;
@@ -148,14 +145,15 @@ DELIMITER ;
 
 -- 5. Massa de Dados (Seed Data)
 
--- Participantes (5)
--- Todos com senha '123456' (Hash: $2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxh9qzCe3nOp.qeb8h8Jp5.qeb8h8)
+-- Participantes (6)
+-- Todos com senha '123456' (Hash: $2b$12$W1jjB3T4jW0var.hOF4sJ.m2FAvlKYzPX3Tus7BheIj8s0.c4gd9C)
 INSERT INTO participantes (cpf, nome, email, tipo, senha_hash) VALUES 
-('11111111111', 'Prof. Dr. Alberto', 'alberto@ufnes.br', 'DOCENTE', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxh9qzCe3nOp.qeb8h8Jp5.qeb8h8'), 
-('22222222222', 'Profa. Dra. Beatriz', 'beatriz@ufnes.br', 'DOCENTE', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxh9qzCe3nOp.qeb8h8Jp5.qeb8h8'),
-('33333333333', 'Carlos Aluno', 'carlos@aluno.ufnes.br', 'DISCENTE', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxh9qzCe3nOp.qeb8h8Jp5.qeb8h8'),
-('44444444444', 'Daniela Aluna', 'daniela@aluno.ufnes.br', 'DISCENTE', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxh9qzCe3nOp.qeb8h8Jp5.qeb8h8'),
-('55555555555', 'Eduardo Técnico', 'eduardo@adm.ufnes.br', 'TECNICO', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxh9qzCe3nOp.qeb8h8Jp5.qeb8h8');
+('00000000000', 'Administrador', 'admin@sigpesq.br', 'ADMIN', '$2b$12$W1jjB3T4jW0var.hOF4sJ.m2FAvlKYzPX3Tus7BheIj8s0.c4gd9C'),
+('11111111111', 'Prof. Dr. Alberto', 'alberto@ufnes.br', 'DOCENTE', '$2b$12$W1jjB3T4jW0var.hOF4sJ.m2FAvlKYzPX3Tus7BheIj8s0.c4gd9C'), 
+('22222222222', 'Profa. Dra. Beatriz', 'beatriz@ufnes.br', 'DOCENTE', '$2b$12$W1jjB3T4jW0var.hOF4sJ.m2FAvlKYzPX3Tus7BheIj8s0.c4gd9C'),
+('33333333333', 'Carlos Aluno', 'carlos@aluno.ufnes.br', 'DISCENTE', '$2b$12$W1jjB3T4jW0var.hOF4sJ.m2FAvlKYzPX3Tus7BheIj8s0.c4gd9C'),
+('44444444444', 'Daniela Aluna', 'daniela@aluno.ufnes.br', 'DISCENTE', '$2b$12$W1jjB3T4jW0var.hOF4sJ.m2FAvlKYzPX3Tus7BheIj8s0.c4gd9C'),
+('55555555555', 'Eduardo Técnico', 'eduardo@adm.ufnes.br', 'TECNICO', '$2b$12$W1jjB3T4jW0var.hOF4sJ.m2FAvlKYzPX3Tus7BheIj8s0.c4gd9C');
 
 -- Agencias (3)
 INSERT INTO agencias (sigla, nome) VALUES 
