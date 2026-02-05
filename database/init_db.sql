@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS participantes (
 -- Tabela: Agencia
 -- Chave Natural: Sigla
 CREATE TABLE IF NOT EXISTS agencias (
-    sigla VARCHAR(20) NOT NULL,
+    sigla CHAR(20) NOT NULL,
     nome VARCHAR(100) NOT NULL,
     PRIMARY KEY (sigla)
 );
@@ -28,8 +28,8 @@ CREATE TABLE IF NOT EXISTS agencias (
 -- Tabela: Financiamento
 -- Chave Natural: Código Processo
 CREATE TABLE IF NOT EXISTS financiamentos (
-    codigo_processo VARCHAR(50) NOT NULL,
-    agencia_sigla VARCHAR(20) NOT NULL,
+    codigo_processo CHAR(50) NOT NULL,
+    agencia_sigla CHAR(20) NOT NULL,
     tipo_fomento VARCHAR(50) NOT NULL,
     valor_total DECIMAL(15, 2) NOT NULL,
     data_inicio DATE NOT NULL,
@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS financiamentos (
 -- 1. Coordenador deve ser um participante (FK).
 -- 2. A validação se é DOCENTE será feita via TRIGGER.
 CREATE TABLE IF NOT EXISTS projetos (
-    codigo VARCHAR(20) NOT NULL,
+    codigo CHAR(20) NOT NULL,
     titulo VARCHAR(200) NOT NULL,
     descricao TEXT,
     data_inicio DATE NOT NULL,
@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS projetos (
 -- Tabela: ParticipanteProjeto
 -- Função e Período são atributos do relacionamento.
 CREATE TABLE IF NOT EXISTS participantes_projetos (
-    projeto_codigo VARCHAR(20) NOT NULL,
+    projeto_codigo CHAR(20) NOT NULL,
     participante_cpf CHAR(11) NOT NULL,
     funcao VARCHAR(100) NOT NULL, -- Ex: Bolsista, Pesquisador
     data_entrada DATE NOT NULL,
@@ -76,8 +76,8 @@ CREATE TABLE IF NOT EXISTS participantes_projetos (
 -- Tabela: ProjetoFinanciamento
 -- Quanto do financiamento vai para o projeto.
 CREATE TABLE IF NOT EXISTS projetos_financiamentos (
-    projeto_codigo VARCHAR(20) NOT NULL,
-    financiamento_codigo VARCHAR(50) NOT NULL,
+    projeto_codigo CHAR(20) NOT NULL,
+    financiamento_codigo CHAR(50) NOT NULL,
     valor_alocado DECIMAL(15, 2) NOT NULL,
     data_alocacao DATE DEFAULT (CURRENT_DATE),
     PRIMARY KEY (projeto_codigo, financiamento_codigo),
@@ -89,8 +89,8 @@ CREATE TABLE IF NOT EXISTS projetos_financiamentos (
 
 -- Tabela: Producao
 CREATE TABLE IF NOT EXISTS producoes (
-    id_registro VARCHAR(50) NOT NULL, -- DOI ou ID interno
-    projeto_codigo VARCHAR(20), -- Pode ser NULL (independente), mas a regra diz vinculada
+    id_registro CHAR(50) NOT NULL, -- DOI ou ID interno
+    projeto_codigo CHAR(20), -- Pode ser NULL (independente), mas a regra diz vinculada
     titulo VARCHAR(250) NOT NULL,
     tipo ENUM('ARTIGO', 'LIVRO', 'CAPITULO', 'TRABALHO', 'RESUMO') NOT NULL,
     ano_publicacao INT NOT NULL,
@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS producoes (
 -- Tabela: ProducaoAutor
 -- Ordem dos autores na publicação.
 CREATE TABLE IF NOT EXISTS producoes_autores (
-    producao_id VARCHAR(50) NOT NULL,
+    producao_id CHAR(50) NOT NULL,
     participante_cpf CHAR(11) NOT NULL,
     ordem INT NOT NULL,
     PRIMARY KEY (producao_id, participante_cpf),
