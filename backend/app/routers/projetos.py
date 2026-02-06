@@ -21,9 +21,6 @@ class VincularFinanciamentoRequest(BaseModel):
 
 @router.post("/", response_model=ProjetoResponse)
 async def create_projeto(projeto: ProjetoCreate, current_user: dict = Depends(get_current_user)):
-    if current_user["type"] not in ["ADMIN", "DOCENTE"]:
-        raise HTTPException(status_code=403, detail="Apenas administradores ou docentes podem criar projetos")
-    
     try:
         await repository.create(projeto)
         return await repository.get_by_codigo(projeto.codigo)

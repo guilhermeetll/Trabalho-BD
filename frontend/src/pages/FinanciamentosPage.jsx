@@ -184,7 +184,7 @@ export default function FinanciamentosPage() {
 
     async function handleVincular(e) {
         e.preventDefault()
-        
+
         if (parseFloat(valorAlocadoParaVinculo) <= 0) {
             alert('O valor alocado deve ser maior que zero')
             return
@@ -214,22 +214,20 @@ export default function FinanciamentosPage() {
         <div style={{ padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h1 style={{ fontSize: '2rem', color: 'var(--secondary)' }}>Financiamentos</h1>
-                {isAdmin && (
-                    <button
-                        onClick={openCreateModal}
-                        style={{
-                            padding: '0.75rem 1.5rem',
-                            background: 'var(--primary)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontWeight: '500'
-                        }}
-                    >
-                        + Novo Financiamento
-                    </button>
-                )}
+                <button
+                    onClick={openCreateModal}
+                    style={{
+                        padding: '0.75rem 1.5rem',
+                        background: 'var(--primary)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontWeight: '500'
+                    }}
+                >
+                    + Novo Financiamento
+                </button>
             </div>
 
             {/* Total Card */}
