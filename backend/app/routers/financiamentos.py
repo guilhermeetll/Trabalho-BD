@@ -9,6 +9,9 @@ repository = FinanciamentoRepository()
 
 @router.post("/agencias", response_model=AgenciaResponse)
 async def create_agencia(agencia: AgenciaCreate, current_user: dict = Depends(get_current_user)):
+    if current_user["type"] not in ["ADMIN", "DOCENTE"]:
+        raise HTTPException(status_code=403, detail="Apenas administradores ou docentes podem cadastrar agências")
+    
     try:
         return await repository.create_agencia(agencia)
     except Exception as e:
@@ -27,6 +30,9 @@ async def list_agencias_distinct(current_user: dict = Depends(get_current_user))
 
 @router.post("/", response_model=FinanciamentoResponse)
 async def create_financiamento(fin: FinanciamentoCreate, current_user: dict = Depends(get_current_user)):
+    if current_user["type"] not in ["ADMIN", "DOCENTE"]:
+        raise HTTPException(status_code=403, detail="Apenas administradores ou docentes podem cadastrar financiamentos")
+
     # Validar valor positivo
     if fin.valor_total <= 0:
         raise HTTPException(status_code=400, detail="O valor do financiamento deve ser positivo")

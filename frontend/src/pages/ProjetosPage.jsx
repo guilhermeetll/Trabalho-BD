@@ -276,20 +276,22 @@ export default function ProjetosPage() {
         <div style={{ padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h1 style={{ fontSize: '2rem', color: 'var(--secondary)' }}>Projetos de Pesquisa</h1>
-                <button
-                    onClick={openCreateModal}
-                    style={{
-                        padding: '0.75rem 1.5rem',
-                        background: 'var(--primary)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontWeight: '500'
-                    }}
-                >
-                    + Novo Projeto
-                </button>
+                {(isAdmin || isDocente) && (
+                    <button
+                        onClick={openCreateModal}
+                        style={{
+                            padding: '0.75rem 1.5rem',
+                            background: 'var(--primary)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: '500'
+                        }}
+                    >
+                        + Novo Projeto
+                    </button>
+                )}
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>

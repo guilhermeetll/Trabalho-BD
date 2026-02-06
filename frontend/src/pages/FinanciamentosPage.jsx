@@ -12,6 +12,7 @@ import { formatCurrency, formatDate } from '../utils/formatters'
 export default function FinanciamentosPage() {
     const { user } = useAuth()
     const isAdmin = user?.type === 'ADMIN'
+    const isDocente = user?.type === 'DOCENTE'
 
     const [financiamentos, setFinanciamentos] = useState([])
     const [filteredFinanciamentos, setFilteredFinanciamentos] = useState([])
@@ -214,20 +215,22 @@ export default function FinanciamentosPage() {
         <div style={{ padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h1 style={{ fontSize: '2rem', color: 'var(--secondary)' }}>Financiamentos</h1>
-                <button
-                    onClick={openCreateModal}
-                    style={{
-                        padding: '0.75rem 1.5rem',
-                        background: 'var(--primary)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontWeight: '500'
-                    }}
-                >
-                    + Novo Financiamento
-                </button>
+                {(isAdmin || isDocente) && (
+                    <button
+                        onClick={openCreateModal}
+                        style={{
+                            padding: '0.75rem 1.5rem',
+                            background: 'var(--primary)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: '500'
+                        }}
+                    >
+                        + Novo Financiamento
+                    </button>
+                )}
             </div>
 
             {/* Total Card */}
