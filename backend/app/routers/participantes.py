@@ -9,6 +9,9 @@ repository = ParticipanteRepository()
 
 @router.post("/", response_model=ParticipanteResponse)
 async def create_participante(participante: ParticipanteCreate, current_user: dict = Depends(get_current_user)):
+    if current_user["type"] not in ["ADMIN", "DOCENTE"]:
+        raise HTTPException(status_code=403, detail="Apenas administradores ou docentes podem criar participantes")
+    
     try:
         result = await repository.create(participante)
         return await repository.get_by_cpf(result.cpf)

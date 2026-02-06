@@ -12,6 +12,8 @@ export default function ParticipantesPage() {
     const { user } = useAuth()
     const isAdmin = user?.type === 'ADMIN'
 
+    const isDocente = user?.type === 'DOCENTE'
+
     const [participantes, setParticipantes] = useState([])
     const [filteredParticipantes, setFilteredParticipantes] = useState([])
     const [loading, setLoading] = useState(true)
@@ -161,20 +163,22 @@ export default function ParticipantesPage() {
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h1 style={{ fontSize: '2rem', color: 'var(--secondary)' }}>Participantes</h1>
-                <button
-                    onClick={openCreateModal}
-                    style={{
-                        padding: '0.75rem 1.5rem',
-                        background: 'var(--primary)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontWeight: '500'
-                    }}
-                >
-                    + Novo Participante
-                </button>
+                {(isAdmin || isDocente) && (
+                    <button
+                        onClick={openCreateModal}
+                        style={{
+                            padding: '0.75rem 1.5rem',
+                            background: 'var(--primary)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: '500'
+                        }}
+                    >
+                        + Novo Participante
+                    </button>
+                )}
             </div>
 
             {/* Search and Filters */}
